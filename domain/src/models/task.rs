@@ -12,7 +12,11 @@ pub struct CompletedTask {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "completion")]
 pub enum Task {
+    #[serde(rename = "completed")]
     Uncompleted(UncompletedTask),
+
+    #[serde(rename = "uncompleted")]
     Completed(CompletedTask),
 }
