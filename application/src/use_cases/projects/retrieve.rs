@@ -3,7 +3,7 @@ impl crate::ProjectsUseCase {
         params: &taskios_domain::params::use_cases::project::RetrieveParams,
         _authios_sdk: std::sync::Arc<authios_sdk::Sdk>,
         client: A
-    ) -> Result<(), Error> {
+    ) -> Result<taskios_domain::Project, Error> {
         use taskios_domain::params::repositories::project::RetrieveParams;
         use authios_sdk::user::authorize::AuthorizeParams;
  
@@ -28,7 +28,7 @@ impl crate::ProjectsUseCase {
             .await
             .map_err(|_| Error::NotExist)?;
         
-        return Ok(());
+        return Ok(data);
     }
 }
 
