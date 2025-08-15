@@ -1,14 +1,14 @@
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UncompletedTask {
-    id: i32,
-    title: String,
-    description: String
+    pub id: i32,
+    pub title: String,
+    pub description: String
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CompletedTask {
-    id: i32,
-    title: String
+    pub id: i32,
+    pub title: String
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
