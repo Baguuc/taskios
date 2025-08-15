@@ -24,9 +24,9 @@ impl crate::TasksUseCase {
 
         let update_params = UpdateParams {
             id: params.id.clone(),
-            new: UpdateNewData {    
-                title: Some(params.new.title.clone()), 
-                description: Some(params.new.description.clone()), 
+            new: UpdateNewData {
+                title: params.new.title.clone(), 
+                description: params.new.description.clone(), 
                 completion: None
             }
         };

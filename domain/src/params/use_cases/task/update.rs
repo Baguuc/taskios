@@ -5,6 +5,6 @@ pub struct Params {
 }
 
 pub struct NewData {
-    pub title: String,
-    pub description: String
+    pub title: Option<String>,
+    pub description: Option<String>
 }
