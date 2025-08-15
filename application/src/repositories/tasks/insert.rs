@@ -4,7 +4,7 @@ impl crate::repositories::tasks::TasksRepository {
         client: A
     ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
         let mut client = client.acquire().await?; 
-        let sql = "INSERT INTO tasks (title, description, project_id) VALUES ($1, $2, $3);"; 
+        let sql = "INSERT INTO tasks (title, description, project_id, completion) VALUES ($1, $2, $3, 'uncompleted');"; 
 
         return sqlx::query(sql)
             .bind(&params.title)
