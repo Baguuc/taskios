@@ -30,7 +30,7 @@ pub async fn controller(
         id: path.id
     };
     return match ProjectsUseCase::delete(&params, _authios_sdk.into_inner(), &mut *database_client).await {
-        Ok(project) => HttpResponse::Ok().json(project),
+        Ok(_) => HttpResponse::Ok().json(()),
         Err(error) => match error {
             Error::Unauthorized => HttpResponse::Unauthorized().body(error.to_string()),
             Error::NotExist => HttpResponse::NotFound().body(error.to_string()),
