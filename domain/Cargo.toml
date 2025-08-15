@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 serde.workspace = true
 sqlx.workspace = true
+thiserror = "2.0.14"

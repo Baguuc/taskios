@@ -1,0 +1,32 @@
+impl crate::ProjectsUseCase {
+    pub async fn list<'a, A: sqlx::Acquire<'a, Database = sqlx::Postgres>>(
+        params: &taskios_domain::params::use_cases::project::ListParams,
+        _authios_sdk: std::sync::Arc<authios_sdk::Sdk>,
+        client: A
+    ) -> Result<Vec<taskios_domain::Project>, Error> {
+        use authios_sdk::user::authorize::AuthorizeParams;
+ 
+        let authorize_params = AuthorizeParams { 
+            token: params.user_token.clone(), 
+            permission: format!("taskios:projects:list")
+        };
+        match _authios_sdk.authorize(authorize_params).await {
+            Ok(true) => (),
+            Err(_) | Ok(false) => return Err(Error::Unauthorized)
+        };
+
+        
+        let mut client = client.acquire()
+            .await
+            .map_err(|_| Error::DatabaseConnection)?;
+
+
+        let data = crate::ProjectsRepository::list(&mut *client)
+            .await
+            .unwrap_or(vec![]);
+        
+        return Ok(data);
+    }
+}
+
+type Error = taskios_domain::errors::use_cases::projects::list::Error;

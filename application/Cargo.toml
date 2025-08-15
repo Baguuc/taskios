@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+authios-sdk = { git = "https://github.com/Baguuc/authios", version = "0.1.0" }
 serde_json.workspace = true
 sqlx.workspace = true
 taskios-domain = { version = "0.1.0", path = "../domain" }
+thiserror = "2.0.14"
