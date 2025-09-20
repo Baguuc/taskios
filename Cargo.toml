@@ -1,8 +1,16 @@
-[workspace]
-resolver = "3"
-members = [ "application","domain", "presentation"]
+[package]
+name = "taskios"
+version = "0.1.0"
+edition = "2024"
 
-[workspace.dependencies]
+[dependencies]
+actix-web = "4"
+thiserror = "2"
+clap = { version = "4.5.40", features = ["derive"] }
+sqlx = { version = "0.8", features = [ "runtime-tokio", "postgres" ] }
+clin = { git = "https://github.com/Baguuc/clin" }
+colored = "3.0.0"
+futures = "0.3.31"
 serde = { version = "1", features = [ "derive" ] }
 serde_json = "1"
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }
+tokio = { version = "1.46.1", features = ["full"] }
