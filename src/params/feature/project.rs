@@ -8,3 +8,8 @@ pub struct ProjectUpdateParams<'p> {
     pub new_name: &'p Option<String>,
     pub token: &'p String
 }
+
+pub struct ProjectDeleteParams<'p> {
+    pub id: &'p i32,
+    pub token: &'p String
+}

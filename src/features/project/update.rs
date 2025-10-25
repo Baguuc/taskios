@@ -41,6 +41,7 @@ impl ProjectUpdateFeature {
         let sql = "UPDATE projects SET name = $1 WHERE id = $2;";
         let result = sqlx::query(sql)
             .bind(params.new_name.clone().unwrap())
+            .bind(params.id)
             .execute(&mut *database_connection)
             .await
             .unwrap();
