@@ -14,3 +14,4 @@ futures = "0.3.31"
 serde = { version = "1", features = [ "derive" ] }
 serde_json = "1"
 tokio = { version = "1.46.1", features = ["full"] }
+authios-sdk = { git = "https://github.com/Baguuc/authios-sdk", version = "0.1.0" }
