@@ -1,13 +1,13 @@
-pub struct ProjectListTasksFeature;
+pub struct ProjectCreateTaskFeature;
 
-impl ProjectListTasksFeature {
+impl ProjectCreateTaskFeature {
     pub async fn execute<'p, A: sqlx::Acquire<'p, Database = sqlx::Postgres>>(
-        params: crate::params::feature::ProjectListTasksParams<'p>,
+        params: crate::params::feature::ProjectCreateTaskParams<'p>,
         database_connection: A,
         authios_client: authios_sdk::AuthiosClient
-    ) -> Result<Option<Vec<crate::models::Task>>, crate::errors::feature::ProjectListTasksError> {
+    ) -> Result<(), crate::errors::feature::ProjectCreateTaskError> {
         use crate::utils::project::project_exists;
-        use crate::errors::feature::ProjectListTasksError as Error;
+        use crate::errors::feature::ProjectCreateTaskError as Error;
         use authios_sdk::requests::{
             LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
             LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest
@@ -49,8 +49,8 @@ impl ProjectListTasksFeature {
             .check(ResourcePermissionRequest {
                 service_id: String::from("taskios"),
                 resource_type: String::from("project"),
-                resource_id: params.id.to_string(),
-                permission_name: String::from("read")
+                resource_id: params.project_id.to_string(),
+                permission_name: String::from("write")
             })
             .await;
 
@@ -63,18 +63,23 @@ impl ProjectListTasksFeature {
             ResourcePermissionResponse::ServerUnavailable => panic!("AUTH SERVER ERROR: auth server shut down"),
             ResourcePermissionResponse::PermissionNotFound => panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software")
         };
-
-        if !project_exists(params.id, &mut *database_connection).await {
+        
+        if !project_exists(params.project_id, &mut *database_connection).await {
             return Err(Error::ProjectNotFound);
         }
 
-        let sql = "SELECT t.id, t.name, t.description, t.done FROM tasks t WHERE t.project_id = $1;";
-        let result = sqlx::query_as(sql)
-            .bind(params.id)
-            .fetch_all(&mut *database_connection)
-            .await
-            .unwrap();
+        let sql = "INSERT INTO tasks (name, description, done, project_id) VALUES ($1, $2, false, $3);";
+        let result = sqlx::query(sql)
+            .bind(params.project_id)
+            .execute(&mut *database_connection)
+            .await;
 
-        Ok(Some(result))
+        match result {
+            Err(error) => match error {
+                sqlx::Error::Database(error) if error.is_foreign_key_violation() => Err(Error::ProjectNotFound),
+                _ => panic!("something went wrong: an unexpected error has happened.")
+            },
+            _ => Ok(())
+        }
     }
 }

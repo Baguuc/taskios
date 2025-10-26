@@ -1,12 +1,13 @@
 CREATE TABLE projects (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   name VARCHAR(50)
 );
 
 CREATE TABLE tasks (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   title VARCHAR(50),
   description TEXT,
-  done BOOLEAN,
-  project_id INTEGER FOREIGN KEY REFERENCES projects(id)
+  done BOOLEAN NOT NULL,
+  project_id INTEGER NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id)
 );

@@ -26,3 +26,8 @@ pub struct ProjectListTasksParams<'p> {
     // the page size is 5
     pub page_number: &'p u32
 }
+
+pub struct ProjectCreateTaskParams<'p> {
+    pub project_id: &'p i32,
+    pub token: &'p String
+}
