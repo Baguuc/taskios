@@ -36,3 +36,11 @@ pub struct ProjectDeleteTaskParams<'p> {
     pub task_id: &'p i32,
     pub token: &'p String
 }
+
+pub struct ProjectUpdateTaskParams<'p> {
+    pub task_id: &'p i32,
+    pub new_title: Option<String>,
+    pub new_description: Option<String>,
+    pub new_done: Option<bool>,
+    pub token: &'p String
+}

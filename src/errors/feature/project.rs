@@ -63,3 +63,13 @@ pub enum ProjectDeleteTaskError {
     #[error("task_not_found")]
     TaskNotFound
 }
+
+#[derive(thiserror::Error, Debug)]
+pub enum ProjectUpdateTaskError {
+    #[error("unauthorized")]
+    Unauthorized,
+    #[error("invalid_token")]
+    InvalidToken,
+    #[error("task_not_found")]
+    TaskNotFound
+}
