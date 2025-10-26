@@ -1,3 +1,4 @@
+mod models;
 mod features;
 mod params;
 mod errors;

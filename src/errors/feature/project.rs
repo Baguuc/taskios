@@ -7,6 +7,14 @@ pub enum ProjectCreateError {
 }
 
 #[derive(thiserror::Error, Debug)]
+pub enum ProjectListError {
+    #[error("unauthorized")]
+    Unauthorized,
+    #[error("invalid_token")]
+    InvalidToken
+}
+
+#[derive(thiserror::Error, Debug)]
 pub enum ProjectUpdateError {
     #[error("unauthorized")]
     Unauthorized,

@@ -3,6 +3,12 @@ pub struct ProjectCreateParams<'p> {
     pub token: &'p String
 }
 
+pub struct ProjectListParams<'p> {
+    pub token: &'p String,
+    // the page size is 5
+    pub page_number: &'p u32
+}
+
 pub struct ProjectUpdateParams<'p> {
     pub id: &'p i32,
     pub new_name: &'p Option<String>,
