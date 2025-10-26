@@ -5,9 +5,8 @@ impl ProjectListTasksFeature {
         params: crate::params::feature::ProjectListTasksParams<'p>,
         database_connection: A,
         authios_client: authios_sdk::AuthiosClient
-    ) -> Result<Option<Vec<crate::models::Task>>, crate::errors::feature::ProjectListError> {
-        use crate::models::Task; 
-        use crate::errors::feature::ProjectListError as Error;
+    ) -> Result<Option<Vec<crate::models::Task>>, crate::errors::feature::ProjectListTasksError> {
+        use crate::errors::feature::ProjectListTasksError as Error;
         use authios_sdk::requests::{
             LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
             LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest
@@ -64,7 +63,18 @@ impl ProjectListTasksFeature {
             ResourcePermissionResponse::PermissionNotFound => panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software")
         };
 
-        let sql = "SELECT id, name, description, done FROM tasks WHERE project_id = $1;";
+        let sql = "SELECT projects p WHERE p.id = $1;";
+        let result = sqlx::query(sql)
+            .bind(params.id)
+            .execute(&mut *database_connection)
+            .await
+            .unwrap();
+
+        if result.rows_affected() == 0 {
+            return Err(Error::ProjectNotFound);
+        }
+
+        let sql = "SELECT t.id, t.name, t.description, t.done FROM tasks t WHERE t.project_id = $1;";
         let result = sqlx::query_as(sql)
             .bind(params.id)
             .fetch_all(&mut *database_connection)
