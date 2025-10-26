@@ -15,3 +15,6 @@ pub use list_tasks::ProjectListTasksFeature;
 
 mod create_task;
 pub use create_task::ProjectCreateTaskFeature;
+
+mod delete_task;
+pub use delete_task::ProjectDeleteTaskFeature;

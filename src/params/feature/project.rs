@@ -31,3 +31,8 @@ pub struct ProjectCreateTaskParams<'p> {
     pub project_id: &'p i32,
     pub token: &'p String
 }
+
+pub struct ProjectDeleteTaskParams<'p> {
+    pub task_id: &'p i32,
+    pub token: &'p String
+}
