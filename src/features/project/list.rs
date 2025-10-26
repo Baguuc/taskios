@@ -48,7 +48,7 @@ impl ProjectListFeature {
             .resource()
             .list(ResourcePermissionRequest {
                 service_id: String::from("taskios"),
-                resource_type: String::from("vault"),
+                resource_type: String::from("project"),
                 page_number: *params.page_number,
                 get_service_id: false,
                 get_resource_type: false,

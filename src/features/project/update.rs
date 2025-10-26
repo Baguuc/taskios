@@ -51,7 +51,7 @@ impl ProjectUpdateFeature {
             .resource()
             .check(ResourcePermissionRequest {
                 service_id: String::from("taskios"),
-                resource_type: String::from("vault"),
+                resource_type: String::from("project"),
                 resource_id: params.id.to_string(),
                 permission_name: String::from("manage"),
             })
