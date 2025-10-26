@@ -6,7 +6,6 @@ impl ProjectCreateTaskFeature {
         database_connection: A,
         authios_client: authios_sdk::AuthiosClient
     ) -> Result<(), crate::errors::feature::ProjectCreateTaskError> {
-        use crate::utils::project::project_exists;
         use crate::errors::feature::ProjectCreateTaskError as Error;
         use authios_sdk::requests::{
             LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
@@ -63,10 +62,6 @@ impl ProjectCreateTaskFeature {
             ResourcePermissionResponse::ServerUnavailable => panic!("AUTH SERVER ERROR: auth server shut down"),
             ResourcePermissionResponse::PermissionNotFound => panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software")
         };
-        
-        if !project_exists(params.project_id, &mut *database_connection).await {
-            return Err(Error::ProjectNotFound);
-        }
 
         let sql = "INSERT INTO tasks (name, description, done, project_id) VALUES ($1, $2, false, $3);";
         let result = sqlx::query(sql)
