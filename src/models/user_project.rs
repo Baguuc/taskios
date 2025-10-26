@@ -1,3 +1,4 @@
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct UserProject {
     pub id: i32,
     pub name: String,

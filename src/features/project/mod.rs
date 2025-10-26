@@ -9,3 +9,6 @@ pub use update::ProjectUpdateFeature;
 
 mod delete;
 pub use delete::ProjectDeleteFeature;
+
+mod list_tasks;
+pub use list_tasks::ProjectListTasksFeature;
