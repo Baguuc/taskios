@@ -6,6 +6,7 @@ impl ProjectUpdateFeature {
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<(), crate::errors::feature::ProjectUpdateError> {
+        use crate::utils::panic::UtilPanics;
         use crate::errors::feature::ProjectUpdateError as Error;
         use authios_sdk::requests::{
             LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
@@ -39,9 +40,9 @@ impl ProjectUpdateFeature {
                 return Err(Error::Unauthorized)
             },
             ServicePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ServicePermissionResponse::ServerNotAuthios => panic!("AUTH SERVER ERROR: auth server returns invalid responses"),
-            ServicePermissionResponse::ServerUnavailable => panic!("AUTH SERVER ERROR: auth server shut down"),
-            ServicePermissionResponse::PermissionNotFound => panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software")
+            ServicePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
+            ServicePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
+            ServicePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
         
         let resource_permission_response = authios_client.query()
@@ -62,9 +63,9 @@ impl ProjectUpdateFeature {
                 return Err(Error::Unauthorized)
             },
             ResourcePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ResourcePermissionResponse::ServerNotAuthios => panic!("AUTH SERVER ERROR: auth server returns invalid responses"),
-            ResourcePermissionResponse::ServerUnavailable => panic!("AUTH SERVER ERROR: auth server shut down"),
-            ResourcePermissionResponse::PermissionNotFound => panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software")
+            ResourcePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
+            ResourcePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
+            ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
         
         let sql = "UPDATE projects SET name = $1 WHERE id = $2;";

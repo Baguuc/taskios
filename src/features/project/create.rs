@@ -6,6 +6,7 @@ impl ProjectCreateFeature {
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<(), crate::errors::feature::ProjectCreateError> {
+        use crate::utils::panic::UtilPanics;
         use crate::errors::feature::ProjectCreateError as Error;
         use authios_sdk::requests::LoggedUserCheckServicePermissionRequest as AuthRequest;
         use authios_sdk::responses::LoggedUserCheckServicePermissionResponse as AuthResponse;
@@ -29,9 +30,9 @@ impl ProjectCreateFeature {
                 return Err(Error::Unauthorized)
             },
             AuthResponse::InvalidToken => return Err(Error::InvalidToken),
-            AuthResponse::ServerNotAuthios => panic!("AUTH SERVER ERROR: auth server returns invalid responses"),
-            AuthResponse::ServerUnavailable => panic!("AUTH SERVER ERROR: auth server shut down"),
-            AuthResponse::PermissionNotFound => panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software")
+            AuthResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
+            AuthResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
+            AuthResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
         
         let sql = "INSERT INTO projects (name) VALUES ($1);";

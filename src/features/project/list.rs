@@ -6,6 +6,7 @@ impl ProjectListFeature {
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<Option<Vec<crate::models::UserProject>>, crate::errors::feature::ProjectListError> {
+        use crate::utils::panic::UtilPanics;
         use crate::models::UserProject; 
         use crate::errors::feature::ProjectListError as Error;
         use authios_sdk::requests::{
@@ -36,9 +37,9 @@ impl ProjectListFeature {
                 return Err(Error::Unauthorized);
             },
             ServicePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ServicePermissionResponse::ServerNotAuthios => panic!("AUTH SERVER ERROR: auth server returns invalid responses"),
-            ServicePermissionResponse::ServerUnavailable => panic!("AUTH SERVER ERROR: auth server shut down"),
-            ServicePermissionResponse::PermissionNotFound => panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software")
+            ServicePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
+            ServicePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
+            ServicePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
 
         let resource_permission_response = authios_client.query()
@@ -61,8 +62,16 @@ impl ProjectListFeature {
         let permissions_page = match resource_permission_response {
             ResourcePermissionResponse::Ok { page } => page,
             ResourcePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ResourcePermissionResponse::ServerNotAuthios => panic!("AUTH SERVER ERROR: auth server returns invalid responses"),
-            ResourcePermissionResponse::ServerUnavailable => panic!("AUTH SERVER ERROR: auth server shut down")
+            ResourcePermissionResponse::ServerNotAuthios => {
+                UtilPanics::server_not_authios();
+                // compilation error otherwise
+                panic!();
+            },
+            ResourcePermissionResponse::ServerUnavailable => {
+                UtilPanics::authios_unavailable();
+                // compilation error otherwise
+                panic!();
+            }
         };
         
         let permissions = match permissions_page.permissions {
