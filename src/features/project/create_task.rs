@@ -1,10 +1,10 @@
 pub struct ProjectCreateTaskFeature;
 
 impl ProjectCreateTaskFeature {
-    pub async fn execute<'p, A: sqlx::Acquire<'p, Database = sqlx::Postgres>>(
+    pub async fn execute<'p>(
         params: crate::params::feature::ProjectCreateTaskParams<'p>,
-        database_connection: A,
-        authios_client: authios_sdk::AuthiosClient
+        database_connection: std::sync::Arc<sqlx::PgPool>,
+        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<(), crate::errors::feature::ProjectCreateTaskError> {
         use crate::errors::feature::ProjectCreateTaskError as Error;
         use authios_sdk::requests::{
@@ -65,6 +65,8 @@ impl ProjectCreateTaskFeature {
 
         let sql = "INSERT INTO tasks (name, description, done, project_id) VALUES ($1, $2, false, $3);";
         let result = sqlx::query(sql)
+            .bind(params.title)
+            .bind(params.description)
             .bind(params.project_id)
             .execute(&mut *database_connection)
             .await;
@@ -77,4 +79,55 @@ impl ProjectCreateTaskFeature {
             _ => Ok(())
         }
     }
+    
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(
+            web::resource(Self::path()).route(web::post().to(Self::controller))
+        );
+    }
+
+    fn path() -> &'static str { "/tasks" }
+    
+    async fn controller(
+        body: actix_web::web::Json<Json>,
+        token: crate::extractors::TokenExtractor,
+        database_connection: actix_web::web::Data<sqlx::PgPool>,
+        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
+    ) -> actix_web::HttpResponse {
+        use serde_json::json;
+        use actix_web::HttpResponse;
+        use crate::errors::feature::ProjectCreateTaskError as Error;
+
+        let result = Self::execute(
+            crate::params::feature::ProjectCreateTaskParams {
+                title: &body.title,
+                description: &body.description,
+                project_id: &body.project_id,
+                token: &token.0
+            },
+            database_connection.into_inner(),
+            authios_client.into_inner()
+        ).await;
+
+        match result {
+            Ok(_) => HttpResponse::Ok().into(),
+            Err(error) => match error {
+                Error::Unauthorized => HttpResponse::Forbidden()
+                    .json(json!({ "code": "forbidden" })),
+                Error::InvalidToken => HttpResponse::Unauthorized()
+                    .json(json!({ "code": "invalid_token" })),
+                Error::ProjectNotFound => HttpResponse::NotFound()
+                    .json(json!({ "code": "project_not_found" }))
+            }
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct Json {
+    pub title: String,
+    pub description: String,
+    pub project_id: i32
 }

@@ -1,10 +1,10 @@
 pub struct ProjectCreateFeature;
 
 impl ProjectCreateFeature {
-    pub async fn execute<'p, A: sqlx::Acquire<'p, Database = sqlx::Postgres>>(
+    pub async fn execute<'p>(
         params: crate::params::feature::ProjectCreateParams<'p>,
-        database_connection: A,
-        authios_client: authios_sdk::AuthiosClient
+        database_connection: std::sync::Arc<sqlx::PgPool>,
+        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<(), crate::errors::feature::ProjectCreateError> {
         use crate::errors::feature::ProjectCreateError as Error;
         use authios_sdk::requests::LoggedUserCheckServicePermissionRequest as AuthRequest;
@@ -42,4 +42,49 @@ impl ProjectCreateFeature {
 
         Ok(())
     }
+    
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(
+            web::resource(Self::path()).route(web::post().to(Self::controller))
+        );
+    }
+
+    fn path() -> &'static str { "/projects" }
+    
+    async fn controller(
+        body: actix_web::web::Json<Json>,
+        token: crate::extractors::TokenExtractor,
+        database_connection: actix_web::web::Data<sqlx::PgPool>,
+        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
+    ) -> actix_web::HttpResponse {
+        use serde_json::json;
+        use actix_web::HttpResponse;
+        use crate::errors::feature::ProjectCreateError as Error;
+
+        let result = Self::execute(
+            crate::params::feature::ProjectCreateParams {
+                name: &body.name,
+                token: &token.0
+            },
+            database_connection.into_inner(),
+            authios_client.into_inner()
+        ).await;
+
+        match result {
+            Ok(_) => HttpResponse::Ok().into(),
+            Err(error) => match error {
+                Error::Unauthorized => HttpResponse::Forbidden()
+                    .json(json!({ "code": "forbidden" })),
+                Error::InvalidToken => HttpResponse::Unauthorized()
+                    .json(json!({ "code": "invalid_token" }))
+            }
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct Json {
+    pub name: String
 }

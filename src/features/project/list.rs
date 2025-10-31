@@ -1,10 +1,10 @@
 pub struct ProjectListFeature;
 
 impl ProjectListFeature {
-    pub async fn execute<'p, A: sqlx::Acquire<'p, Database = sqlx::Postgres>>(
+    pub async fn execute<'p>(
         params: crate::params::feature::ProjectListParams<'p>,
-        database_connection: A,
-        authios_client: authios_sdk::AuthiosClient
+        database_connection: std::sync::Arc<sqlx::PgPool>,
+        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<Option<Vec<crate::models::UserProject>>, crate::errors::feature::ProjectListError> {
         use crate::models::UserProject; 
         use crate::errors::feature::ProjectListError as Error;
@@ -105,4 +105,76 @@ impl ProjectListFeature {
 
         return Ok(Some(user_projects));
     }
+
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(
+            web::resource(Self::path()).route(web::get().to(Self::controller))
+        );
+    }
+
+    fn path() -> &'static str { "/projects/my" }
+    
+    async fn controller(
+        query: actix_web::web::Query<Query>,
+        token: crate::extractors::TokenExtractor,
+        database_connection: actix_web::web::Data<sqlx::PgPool>,
+        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
+    ) -> actix_web::HttpResponse {
+        use serde_json::json;
+        use actix_web::HttpResponse;
+        use crate::errors::feature::ProjectListError as Error;
+
+        let result = Self::execute(
+            crate::params::feature::ProjectListParams {
+                token: &token.0,
+                page_number: &query.page_number.unwrap_or(0)
+            },
+            database_connection.into_inner(),
+            authios_client.into_inner()
+        ).await;
+
+        match result {
+            Ok(data) if data.is_some() => HttpResponse::Ok().json(json!({
+                "code": "ok",
+                "page": data.unwrap().iter().map(|row| {
+                    DataRow {
+                        id: if query.get_id.unwrap_or(true)
+                            { Some(row.id.clone()) } else { None },
+                        name: if query.get_name.unwrap_or(true)
+                            { Some(row.name.clone()) } else { None },
+                        permissions: if query.get_permissions.unwrap_or(true)
+                            { Some(row.permissions.clone()) } else { None }
+                    }
+                }).collect::<Vec<DataRow>>()
+            })),
+            Ok(_) => HttpResponse::Ok().json(json!({
+                "code": "ok",
+                "page": null
+            })),
+            Err(error) => match error {
+                Error::Unauthorized => HttpResponse::Forbidden()
+                    .json(json!({ "code": "forbidden" })),
+                Error::InvalidToken => HttpResponse::Unauthorized()
+                    .json(json!({ "code": "invalid_token" })),
+            }
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde_with::skip_serializing_none]
+struct DataRow {
+    id: Option<i32>,
+    name: Option<String>,
+    permissions: Option<Vec<String>>
+}
+
+#[derive(serde::Deserialize)]
+struct Query {
+    page_number: Option<u32>,
+    get_id: Option<bool>,
+    get_name: Option<bool>,
+    get_permissions: Option<bool>
 }

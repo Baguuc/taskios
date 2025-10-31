@@ -29,6 +29,8 @@ pub struct ProjectListTasksParams<'p> {
 
 pub struct ProjectCreateTaskParams<'p> {
     pub project_id: &'p i32,
+    pub title: &'p String,
+    pub description: &'p String,
     pub token: &'p String
 }
 

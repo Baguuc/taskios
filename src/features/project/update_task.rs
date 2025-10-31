@@ -1,10 +1,10 @@
 pub struct ProjectUpdateTaskFeature;
 
 impl ProjectUpdateTaskFeature {
-    pub async fn execute<'p, A: sqlx::Acquire<'p, Database = sqlx::Postgres>>(
+    pub async fn execute<'p>(
         params: crate::params::feature::ProjectUpdateTaskParams<'p>,
-        database_connection: A,
-        authios_client: authios_sdk::AuthiosClient
+        database_connection: std::sync::Arc<sqlx::PgPool>,
+        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<(), crate::errors::feature::ProjectUpdateTaskError> {
         use crate::models::Task;
         use crate::errors::feature::ProjectUpdateTaskError as Error;
@@ -82,4 +82,62 @@ impl ProjectUpdateTaskFeature {
 
         Ok(())
     }
+
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(
+            web::resource(Self::path()).route(web::patch().to(Self::controller))
+        );
+    }
+
+    fn path() -> &'static str { "/projects/{id}" }
+    
+    async fn controller(
+        path: actix_web::web::Path<Path>,
+        body: actix_web::web::Json<Json>,
+        token: crate::extractors::TokenExtractor,
+        database_connection: actix_web::web::Data<sqlx::PgPool>,
+        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
+    ) -> actix_web::HttpResponse {
+        use serde_json::json;
+        use actix_web::HttpResponse;
+        use crate::errors::feature::ProjectUpdateTaskError as Error;
+
+        let result = Self::execute(
+            crate::params::feature::ProjectUpdateTaskParams {
+                task_id: &path.id,
+                token: &token.0,
+                new_title: body.new_title.clone(),
+                new_description: body.new_description.clone(),
+                new_done: body.new_done
+            },
+            database_connection.into_inner(),
+            authios_client.into_inner()
+        ).await;
+
+        match result {
+            Ok(_) => HttpResponse::Ok().into(),
+            Err(error) => match error {
+                Error::Unauthorized => HttpResponse::Forbidden()
+                    .json(json!({ "code": "forbidden" })),
+                Error::InvalidToken => HttpResponse::Unauthorized()
+                    .json(json!({ "code": "invalid_token" })),
+                Error::TaskNotFound => HttpResponse::NotFound()
+                    .json(json!({ "code": "task_not_found" }))
+            }
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct Path {
+    id: i32
+}
+
+#[derive(serde::Deserialize)]
+struct Json {
+    new_title: Option<String>,
+    new_description: Option<String>,
+    new_done: Option<bool>
 }
