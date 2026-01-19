@@ -103,8 +103,7 @@ impl ProjectListTasksFeature {
         let result = Self::execute(
             crate::params::feature::ProjectListTasksParams {
                 id: &path.id,
-                token: &token.0,
-                page_number: &query.page_number.unwrap_or(0)
+                token: &token.0
             },
             database_connection.into_inner(),
             authios_client.into_inner()
@@ -113,7 +112,7 @@ impl ProjectListTasksFeature {
         match result {
             Ok(data) if data.is_some() => HttpResponse::Ok().json(json!({
                 "code": "ok",
-                "page": data.unwrap().iter().map(|row| {
+                "tasks": data.unwrap().iter().map(|row| {
                     DataRow {
                         id: if query.get_id.unwrap_or(true)
                             { Some(row.id.clone()) } else { None },
@@ -158,7 +157,6 @@ struct Path {
 
 #[derive(serde::Deserialize)]
 struct Query {
-    page_number: Option<u32>,
     get_id: Option<bool>,
     get_title: Option<bool>,
     get_description: Option<bool>,

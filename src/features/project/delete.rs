@@ -65,12 +65,17 @@ impl ProjectDeleteFeature {
         };
         
         let sql = "DELETE FROM projects WHERE id = $1;";
-        let _ = sqlx::query(sql)
+        let result = sqlx::query(sql)
             .bind(params.id)
             .execute(&mut *database_connection)
-            .await;
+            .await
+            .unwrap();
 
-        Ok(())
+        if result.rows_affected() > 0 {
+            Ok(())
+        } else {
+            Err(Error::ProjectNotFound)
+        }
     }
 
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {

@@ -22,9 +22,7 @@ pub struct ProjectDeleteParams<'p> {
 
 pub struct ProjectListTasksParams<'p> {
     pub id: &'p i32,
-    pub token: &'p String,
-    // the page size is 5
-    pub page_number: &'p u32
+    pub token: &'p String
 }
 
 pub struct ProjectCreateTaskParams<'p> {

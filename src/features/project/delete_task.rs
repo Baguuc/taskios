@@ -123,6 +123,5 @@ impl ProjectDeleteTaskFeature {
 
 #[derive(serde::Deserialize)]
 struct Path {
-    pub id: i32,
     pub task_id: i32,
 }
