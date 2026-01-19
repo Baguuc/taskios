@@ -5,6 +5,7 @@ mod errors;
 mod utils;
 mod config;
 mod extractors;
+mod repositories;
 
 #[actix_web::main]
 async fn main() {
@@ -45,10 +46,10 @@ pub async fn run_api(config: crate::config::Config) -> Result<(), crate::errors:
             .configure(features::ProjectListFeature::register)
             .configure(features::ProjectDeleteFeature::register)
             .configure(features::ProjectUpdateFeature::register)
-            .configure(features::ProjectCreateTaskFeature::register)
-            .configure(features::ProjectListTasksFeature::register)
-            .configure(features::ProjectUpdateTaskFeature::register)
-            .configure(features::ProjectDeleteTaskFeature::register)
+            .configure(features::TaskCreateFeature::register)
+            .configure(features::TaskListFeature::register)
+            .configure(features::TaskUpdateFeature::register)
+            .configure(features::TaskDeleteFeature::register)
     });
     server.bind(("0.0.0.0", port))?
         .run()

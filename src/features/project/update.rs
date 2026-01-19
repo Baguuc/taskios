@@ -5,7 +5,7 @@ impl ProjectUpdateFeature {
         params: crate::params::feature::ProjectUpdateParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
-    ) -> Result<(), crate::errors::feature::ProjectUpdateError> {
+    ) -> Result<crate::models::Project, crate::errors::feature::ProjectUpdateError> {
         use crate::utils::panic::UtilPanics;
         use crate::errors::feature::ProjectUpdateError as Error;
         use authios_sdk::requests::{
@@ -16,10 +16,6 @@ impl ProjectUpdateFeature {
             LoggedUserCheckServicePermissionResponse as ServicePermissionResponse,
             LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse
         };
-        
-        if params.new_name.is_none() {
-            return Ok(());
-        }
 
         let mut database_connection = database_connection.acquire()
             .await
@@ -67,19 +63,12 @@ impl ProjectUpdateFeature {
             ResourcePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
             ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
-        
-        let sql = "UPDATE projects SET name = $1 WHERE id = $2;";
-        let result = sqlx::query(sql)
-            .bind(params.new_name.clone().unwrap())
-            .bind(params.id)
-            .execute(&mut *database_connection)
-            .await
-            .unwrap();
 
-        if result.rows_affected() > 0 { 
-            return Ok(()); 
-        } else { 
-            return Err(Error::ProjectNotFound);
+        let result = crate::repositories::ProjectRepository::update(&mut *database_connection, params.id, params.new_data).await;
+
+        match result {
+            Ok(r) => Ok(r),
+            Err(_) => Err(Error::ProjectNotFound)
         }
     }
 
@@ -95,7 +84,7 @@ impl ProjectUpdateFeature {
     
     async fn controller(
         path: actix_web::web::Path<Path>,
-        body: actix_web::web::Json<Json>,
+        body: actix_web::web::Json<crate::models::PartialProject>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
         authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
@@ -108,7 +97,7 @@ impl ProjectUpdateFeature {
             crate::params::feature::ProjectUpdateParams {
                 id: &path.id,
                 token: &token.0,
-                new_name: &body.new_name
+                new_data: &body.into_inner()
             },
             database_connection.into_inner(),
             authios_client.into_inner()
@@ -131,9 +120,4 @@ impl ProjectUpdateFeature {
 #[derive(serde::Deserialize)]
 struct Path {
     id: i32
-}
-
-#[derive(serde::Deserialize)]
-struct Json {
-    new_name: Option<String>
 }

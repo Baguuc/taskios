@@ -1,11 +1,11 @@
-pub struct ProjectCreateTaskFeature;
+pub struct TaskCreateFeature;
 
-impl ProjectCreateTaskFeature {
+impl TaskCreateFeature {
     pub async fn execute<'p>(
-        params: crate::params::feature::ProjectCreateTaskParams<'p>,
+        params: crate::params::feature::TaskCreateParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
-    ) -> Result<(), crate::errors::feature::ProjectCreateTaskError> {
+    ) -> Result<crate::models::Task, crate::errors::feature::ProjectCreateTaskError> {
         use crate::utils::panic::UtilPanics;
         use crate::errors::feature::ProjectCreateTaskError as Error;
         use authios_sdk::requests::{
@@ -16,7 +16,7 @@ impl ProjectCreateTaskFeature {
             LoggedUserCheckServicePermissionResponse as ServicePermissionResponse,
             LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse
         };
-        
+
         let mut database_connection = database_connection.acquire()
             .await
             .unwrap();
@@ -40,7 +40,7 @@ impl ProjectCreateTaskFeature {
             ServicePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
             ServicePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
-        
+
         let resource_permission_response = authios_client.query()
             .user()
             .logged(params.token.clone())
@@ -49,7 +49,7 @@ impl ProjectCreateTaskFeature {
             .check(ResourcePermissionRequest {
                 service_id: String::from("taskios"),
                 resource_type: String::from("project"),
-                resource_id: params.project_id.to_string(),
+                resource_id: params.task.project_id.to_string(),
                 permission_name: String::from("write")
             })
             .await;
@@ -64,23 +64,16 @@ impl ProjectCreateTaskFeature {
             ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
 
-        let sql = "INSERT INTO tasks (name, description, done, project_id) VALUES ($1, $2, false, $3);";
-        let result = sqlx::query(sql)
-            .bind(params.title)
-            .bind(params.description)
-            .bind(params.project_id)
-            .execute(&mut *database_connection)
-            .await;
+        let result = crate::repositories::TaskRepository::create(&mut *database_connection, params.task).await;
 
         match result {
-            Err(error) => match error {
-                sqlx::Error::Database(error) if error.is_foreign_key_violation() => Err(Error::ProjectNotFound),
-                _ => panic!("something went wrong: an unexpected error has happened.")
-            },
-            _ => Ok(())
+            Ok(task) => Ok(task),
+            Err(err) => match err {
+                crate::errors::repository::TaskCreateError::ProjectNotFound => Err(Error::ProjectNotFound)
+            }
         }
     }
-    
+
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
         use actix_web::web;
 
@@ -90,9 +83,9 @@ impl ProjectCreateTaskFeature {
     }
 
     fn path() -> &'static str { "/tasks" }
-    
+
     async fn controller(
-        body: actix_web::web::Json<Json>,
+        body: actix_web::web::Json<crate::models::TaskWithoutId>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
         authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
@@ -102,10 +95,8 @@ impl ProjectCreateTaskFeature {
         use crate::errors::feature::ProjectCreateTaskError as Error;
 
         let result = Self::execute(
-            crate::params::feature::ProjectCreateTaskParams {
-                title: &body.title,
-                description: &body.description,
-                project_id: &body.project_id,
+            crate::params::feature::TaskCreateParams {
+                task: &body.into_inner(),
                 token: &token.0
             },
             database_connection.into_inner(),
@@ -124,11 +115,4 @@ impl ProjectCreateTaskFeature {
             }
         }
     }
-}
-
-#[derive(serde::Deserialize)]
-struct Json {
-    pub title: String,
-    pub description: String,
-    pub project_id: i32
 }

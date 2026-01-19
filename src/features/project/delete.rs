@@ -64,17 +64,9 @@ impl ProjectDeleteFeature {
             ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
         
-        let sql = "DELETE FROM projects WHERE id = $1;";
-        let result = sqlx::query(sql)
-            .bind(params.id)
-            .execute(&mut *database_connection)
-            .await
-            .unwrap();
-
-        if result.rows_affected() > 0 {
-            Ok(())
-        } else {
-            Err(Error::ProjectNotFound)
+        match crate::repositories::ProjectRepository::delete(&mut *database_connection, params.id).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err(Error::ProjectNotFound)
         }
     }
 

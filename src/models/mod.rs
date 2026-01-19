@@ -1,5 +1,14 @@
-mod user_project;
-pub use user_project::UserProject;
+mod project;
+pub use project::{
+    Project,
+    ProjectWithoutId,
+    PartialProject,
+    UserProject
+};
 
 mod task;
-pub use task::Task;
+pub use task::{
+    Task,
+    TaskWithoutId,
+    PartialTask
+};

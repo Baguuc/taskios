@@ -88,15 +88,9 @@ impl ProjectListFeature {
                 _ => continue
             };
 
-            let sql = "SELECT name FROM projects WHERE id = $1;";
-            let result: Result<(String,), sqlx::Error> = sqlx::query_as(sql)
-                .bind(&id)
-                .fetch_one(&mut *database_connection)
-                .await;
-
-            let name = match result {
-                Ok(row) => row.0,
-                _ => continue
+            let project = match crate::repositories::ProjectRepository::retrieve(&mut *database_connection, &id).await {
+                Some(project) => project,
+                None => continue
             };
 
             let permissions = permission.permissions
@@ -104,15 +98,15 @@ impl ProjectListFeature {
                 .unwrap();
 
             let user_project = UserProject {
-                id,
-                name,
+                id: project.id,
+                name: project.name,
                 permissions
             };
 
             user_projects.push(user_project);
         }
 
-        return Ok(Some(user_projects));
+        Ok(Some(user_projects))
     }
 
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {

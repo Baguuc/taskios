@@ -5,7 +5,7 @@ impl ProjectCreateFeature {
         params: crate::params::feature::ProjectCreateParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
-    ) -> Result<(), crate::errors::feature::ProjectCreateError> {
+    ) -> Result<crate::models::Project, crate::errors::feature::ProjectCreateError> {
         use crate::utils::panic::UtilPanics;
         use crate::errors::feature::ProjectCreateError as Error;
         use authios_sdk::requests::LoggedUserCheckServicePermissionRequest as AuthRequest;
@@ -34,14 +34,12 @@ impl ProjectCreateFeature {
             AuthResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
             AuthResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
-        
-        let sql = "INSERT INTO projects (name) VALUES ($1);";
-        let _ = sqlx::query(sql)
-            .bind(params.name)
-            .execute(&mut *database_connection)
-            .await;
 
-        Ok(())
+        match crate::repositories::ProjectRepository::create(&mut *database_connection, params.project).await {
+            Ok(project) => Ok(project),
+            // this shouldn't happen
+            _ => panic!()
+        }
     }
     
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
@@ -55,7 +53,7 @@ impl ProjectCreateFeature {
     fn path() -> &'static str { "/projects" }
     
     async fn controller(
-        body: actix_web::web::Json<Json>,
+        body: actix_web::web::Json<crate::models::ProjectWithoutId>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
         authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
@@ -66,7 +64,7 @@ impl ProjectCreateFeature {
 
         let result = Self::execute(
             crate::params::feature::ProjectCreateParams {
-                name: &body.name,
+                project: &body.into_inner(),
                 token: &token.0
             },
             database_connection.into_inner(),
@@ -83,9 +81,4 @@ impl ProjectCreateFeature {
             }
         }
     }
-}
-
-#[derive(serde::Deserialize)]
-struct Json {
-    pub name: String
 }

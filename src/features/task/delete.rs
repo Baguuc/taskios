@@ -1,14 +1,13 @@
-pub struct ProjectUpdateTaskFeature;
+pub struct TaskDeleteFeature;
 
-impl ProjectUpdateTaskFeature {
+impl TaskDeleteFeature {
     pub async fn execute<'p>(
-        params: crate::params::feature::ProjectUpdateTaskParams<'p>,
+        params: crate::params::feature::TaskDeleteParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
-    ) -> Result<(), crate::errors::feature::ProjectUpdateTaskError> {
+    ) -> Result<(), crate::errors::feature::ProjectDeleteTaskError> {
         use crate::utils::panic::UtilPanics;
-        use crate::models::Task;
-        use crate::errors::feature::ProjectUpdateTaskError as Error;
+        use crate::errors::feature::ProjectDeleteTaskError as Error;
         use authios_sdk::requests::{
             LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
             LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest
@@ -17,7 +16,7 @@ impl ProjectUpdateTaskFeature {
             LoggedUserCheckServicePermissionResponse as ServicePermissionResponse,
             LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse
         };
-        
+
         let mut database_connection = database_connection.acquire()
             .await
             .unwrap();
@@ -41,7 +40,7 @@ impl ProjectUpdateTaskFeature {
             ServicePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
             ServicePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
-        
+
         let resource_permission_response = authios_client.query()
             .user()
             .logged(params.token.clone())
@@ -64,54 +63,39 @@ impl ProjectUpdateTaskFeature {
             ResourcePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
             ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
-        
-        let sql = "SELECT title, description, done FROM tasks WHERE id = $1;";
-        let task: Task = sqlx::query_as(sql)
-            .bind(params.task_id)
-            .fetch_one(&mut *database_connection)
-            .await
-            .map_err(|_| Error::TaskNotFound)?;
 
-        let sql = "UPDATE tasks SET title = $1, description = $2, done = $3 WHERE id = $4;";
-        let _ = sqlx::query(sql)
-            .bind(params.new_title.unwrap_or(task.title.clone()))
-            .bind(params.new_description.unwrap_or(task.description.clone()))
-            .bind(params.new_done.unwrap_or(task.done))
-            .bind(params.task_id)
-            .execute(&mut *database_connection)
-            .await;
+        let result = crate::repositories::TaskRepository::delete(&mut *database_connection, params.task_id).await;
 
-        Ok(())
+        match result {
+            Ok(_) => Ok(()),
+            Err(_) => Err(Error::TaskNotFound)
+        }
     }
 
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
         use actix_web::web;
 
         cfg.service(
-            web::resource(Self::path()).route(web::patch().to(Self::controller))
+            web::resource(Self::path()).route(web::delete().to(Self::controller))
         );
     }
 
-    fn path() -> &'static str { "/projects/{id}" }
-    
+    fn path() -> &'static str { "/tasks/{task_id}" }
+
     async fn controller(
         path: actix_web::web::Path<Path>,
-        body: actix_web::web::Json<Json>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
         authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
     ) -> actix_web::HttpResponse {
         use serde_json::json;
         use actix_web::HttpResponse;
-        use crate::errors::feature::ProjectUpdateTaskError as Error;
+        use crate::errors::feature::ProjectDeleteTaskError as Error;
 
         let result = Self::execute(
-            crate::params::feature::ProjectUpdateTaskParams {
-                task_id: &path.id,
-                token: &token.0,
-                new_title: body.new_title.clone(),
-                new_description: body.new_description.clone(),
-                new_done: body.new_done
+            crate::params::feature::TaskDeleteParams {
+                task_id: &path.task_id,
+                token: &token.0
             },
             database_connection.into_inner(),
             authios_client.into_inner()
@@ -133,12 +117,5 @@ impl ProjectUpdateTaskFeature {
 
 #[derive(serde::Deserialize)]
 struct Path {
-    id: i32
-}
-
-#[derive(serde::Deserialize)]
-struct Json {
-    new_title: Option<String>,
-    new_description: Option<String>,
-    new_done: Option<bool>
+    pub task_id: i32,
 }
