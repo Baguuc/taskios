@@ -7,64 +7,33 @@ impl ProjectDeleteFeature {
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
         config: std::sync::Arc<crate::config::Config>
     ) -> Result<(), crate::errors::feature::ProjectDeleteError> {
-        use crate::utils::panic::UtilPanics;
-        use crate::errors::feature::ProjectDeleteError as Error;
-        use authios_sdk::requests::{
-            LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
-            LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest
+        use crate::utils::auth::{
+            check_user_service_permission,
+            check_user_project_permission
         };
-        use authios_sdk::responses::{
-            LoggedUserCheckServicePermissionResponse as ServicePermissionResponse,
-            LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse
+        use crate::errors::{
+            feature::ProjectDeleteError as Error,
+            utils::auth::{
+                ServicePermissionCheckError,
+                ProjectPermissionCheckError
+            }
+        };
+
+        match check_user_service_permission(params.token.clone(), authios_client.clone()).await {
+            Ok(false) => return Err(Error::Unauthorized),
+            Err(ServicePermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
+            _ => ()
+        };
+
+        match check_user_project_permission(params.token.clone(), params.id.clone(), String::from("manage"), authios_client.clone()).await {
+            Ok(false) => return Err(Error::Unauthorized),
+            Err(ProjectPermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
+            _ => ()
         };
 
         let mut database_connection = database_connection.acquire()
             .await
             .unwrap();
-
-        let service_permission_response = authios_client.query()
-            .user()
-            .logged(params.token.clone())
-            .permissions()
-            .service()
-            .check(ServicePermissionRequest {
-                service_id: String::from("taskios")
-            })
-            .await;
-
-        match service_permission_response {
-            ServicePermissionResponse::Ok { has_permission } => if !has_permission {
-                return Err(Error::Unauthorized);
-            },
-            ServicePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ServicePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
-            ServicePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
-            ServicePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
-        };
-        
-        let auth_response = authios_client.query()
-            .user()
-            .logged(params.token.clone())
-            .permissions()
-            .resource()
-            .check(ResourcePermissionRequest {
-                service_id: String::from("taskios"),
-                resource_type: String::from("project"),
-                resource_id: params.id.to_string(),
-                permission_name: String::from("manage")
-            })
-            .await;
-        
-        match auth_response {
-            ResourcePermissionResponse::Ok { has_permission } => if !has_permission {
-                return Err(Error::Unauthorized);
-            },
-            ResourcePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ResourcePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
-            ResourcePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
-            ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
-        };
-        
         let _ = match crate::repositories::ProjectRepository::delete(&mut *database_connection, params.id).await {
             Ok(_) => (),
             // only this possibility can be covered

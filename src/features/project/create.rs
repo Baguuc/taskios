@@ -7,35 +7,21 @@ impl ProjectCreateFeature {
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
         config: std::sync::Arc<crate::config::Config>
     ) -> Result<crate::models::Project, crate::errors::feature::ProjectCreateError> {
-        use crate::utils::panic::UtilPanics;
-        use crate::errors::feature::ProjectCreateError as Error;
-        use authios_sdk::requests::LoggedUserCheckServicePermissionRequest as PermissionCheckRequest;
-        use authios_sdk::responses::LoggedUserCheckServicePermissionResponse as PermissionCheckResponse;
+        use crate::utils::auth::check_user_service_permission;
+        use crate::errors::{
+            feature::ProjectCreateError as Error,
+            utils::auth::ServicePermissionCheckError
+        };
+
+        match check_user_service_permission(params.token.clone(), authios_client.clone()).await {
+            Ok(false) => return Err(Error::Unauthorized),
+            Err(ServicePermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
+            _ => ()
+        };
 
         let mut database_connection = database_connection.acquire()
             .await
             .unwrap();
-
-        let auth_response = authios_client.query()
-            .user()
-            .logged(params.token.clone())
-            .permissions()
-            .service()
-            .check(PermissionCheckRequest {
-                service_id: String::from("taskios")
-            })
-            .await;
-
-        match auth_response {
-            PermissionCheckResponse::Ok { has_permission } => if !has_permission {
-                return Err(Error::Unauthorized)
-            },
-            PermissionCheckResponse::InvalidToken => return Err(Error::InvalidToken),
-            PermissionCheckResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
-            PermissionCheckResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
-            PermissionCheckResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
-        };
-
         let project = match crate::repositories::ProjectRepository::create(&mut *database_connection, params.project).await {
             Ok(project) => project,
             // this shouldn't happen

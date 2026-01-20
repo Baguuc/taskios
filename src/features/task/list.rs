@@ -6,40 +6,26 @@ impl TaskListFeature {
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<Option<Vec<crate::models::Task>>, crate::errors::feature::ProjectListTasksError> {
-        use crate::utils::panic::UtilPanics;
-        use crate::utils::project::project_exists;
-        use crate::errors::feature::ProjectListTasksError as Error;
-        use authios_sdk::requests::{
-            LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
-            LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest
+        use crate::utils::{
+            panic::UtilPanics,
+            project::project_exists,
+            auth::check_user_service_permission
         };
-        use authios_sdk::responses::{
-            LoggedUserCheckServicePermissionResponse as ServicePermissionResponse,
-            LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse
+        use crate::errors::{
+            feature::ProjectListTasksError as Error,
+            utils::auth::ServicePermissionCheckError
         };
+        use authios_sdk::requests::LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest;
+        use authios_sdk::responses::LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse;
 
         let mut database_connection = database_connection.acquire()
             .await
             .unwrap();
 
-        let service_permission_response = authios_client.query()
-            .user()
-            .logged(params.token.clone())
-            .permissions()
-            .service()
-            .check(ServicePermissionRequest {
-                service_id: String::from("taskios")
-            })
-            .await;
-
-        match service_permission_response {
-            ServicePermissionResponse::Ok { has_permission } => if !has_permission {
-                return Err(Error::Unauthorized);
-            },
-            ServicePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ServicePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
-            ServicePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
-            ServicePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
+        match check_user_service_permission(params.token.clone(), authios_client.clone()).await {
+            Ok(false) => return Err(Error::Unauthorized),
+            Err(ServicePermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
+            _ => ()
         };
 
         let resource_permission_response = authios_client.query()

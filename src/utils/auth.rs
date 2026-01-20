@@ -42,7 +42,7 @@ pub async fn bulk_grant_project_permissions(
             .permissions()
             .resource()
             .grant(PermissionGrantRequest {
-                service_id: String::from("taskios"),
+                service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string(),
                 resource_type: String::from("project"),
                 resource_id: project_id.to_string(),
                 permission_name
@@ -97,7 +97,7 @@ pub async fn bulk_revoke_project_permissions(
             .permissions()
             .resource()
             .revoke(PermissionRevokeRequest {
-                service_id: String::from("taskios"),
+                service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string(),
                 resource_type: String::from("project"),
                 resource_id: project_id.to_string(),
                 permission_name
@@ -106,4 +106,67 @@ pub async fn bulk_revoke_project_permissions(
     }
 
     Ok(())
+}
+
+/// check if user is permitted to access a project with provided permission.
+pub async fn check_user_project_permission(
+    user_token: String,
+    project_id: i32,
+    permission_name: String,
+    authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
+) -> Result<bool, crate::errors::utils::auth::ProjectPermissionCheckError> {
+    use authios_sdk::requests::LoggedUserCheckResourcePermissionRequest as Request;
+    use authios_sdk::responses::LoggedUserCheckResourcePermissionResponse as Response;
+    use crate::errors::utils::auth::ProjectPermissionCheckError as Error;
+    use crate::utils::panic::UtilPanics;
+
+    let auth_response = authios_client.query()
+        .user()
+        .logged(user_token)
+        .permissions()
+        .resource()
+        .check(Request {
+            service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string(),
+            resource_type: String::from("project"),
+            resource_id: project_id.to_string(),
+            permission_name
+        })
+        .await;
+
+    match auth_response {
+        Response::Ok { has_permission } => Ok(has_permission),
+        Response::InvalidToken => Err(Error::InvalidToken),
+        Response::ServerNotAuthios => { UtilPanics::server_not_authios(); std::process::exit(1); },
+        Response::ServerUnavailable => { UtilPanics::authios_unavailable(); std::process::exit(1); },
+        Response::PermissionNotFound => { UtilPanics::authios_not_inited(); std::process::exit(1); },
+    }
+}
+
+/// check if user has the global service permission to access this service.
+pub async fn check_user_service_permission(
+    user_token: String,
+    authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
+) -> Result<bool, crate::errors::utils::auth::ServicePermissionCheckError> {
+    use authios_sdk::requests::LoggedUserCheckServicePermissionRequest as Request;
+    use authios_sdk::responses::LoggedUserCheckServicePermissionResponse as Response;
+    use crate::errors::utils::auth::ServicePermissionCheckError as Error;
+    use crate::utils::panic::UtilPanics;
+
+    let auth_response = authios_client.query()
+        .user()
+        .logged(user_token)
+        .permissions()
+        .service()
+        .check(Request {
+            service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string()
+        })
+        .await;
+
+    match auth_response {
+        Response::Ok { has_permission } => Ok(has_permission),
+        Response::InvalidToken => Err(Error::InvalidToken),
+        Response::ServerNotAuthios => { UtilPanics::server_not_authios(); std::process::exit(1); },
+        Response::ServerUnavailable => { UtilPanics::authios_unavailable(); std::process::exit(1); },
+        Response::PermissionNotFound => { UtilPanics::authios_not_inited(); std::process::exit(1); },
+    }
 }

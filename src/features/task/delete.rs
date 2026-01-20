@@ -6,65 +6,41 @@ impl TaskDeleteFeature {
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
     ) -> Result<(), crate::errors::feature::ProjectDeleteTaskError> {
-        use crate::utils::panic::UtilPanics;
-        use crate::errors::feature::ProjectDeleteTaskError as Error;
-        use authios_sdk::requests::{
-            LoggedUserCheckServicePermissionRequest as ServicePermissionRequest,
-            LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest
+        use crate::repositories::TaskRepository;
+        use crate::utils::auth::{
+            check_user_service_permission,
+            check_user_project_permission
         };
-        use authios_sdk::responses::{
-            LoggedUserCheckServicePermissionResponse as ServicePermissionResponse,
-            LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse
+        use crate::errors::{
+            feature::ProjectDeleteTaskError as Error,
+            utils::auth::{
+                ServicePermissionCheckError,
+                ProjectPermissionCheckError
+            }
+        };
+
+        match check_user_service_permission(params.token.clone(), authios_client.clone()).await {
+            Ok(false) => return Err(Error::Unauthorized),
+            Err(ServicePermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
+            _ => ()
         };
 
         let mut database_connection = database_connection.acquire()
             .await
             .unwrap();
 
-        let service_permission_response = authios_client.query()
-            .user()
-            .logged(params.token.clone())
-            .permissions()
-            .service()
-            .check(ServicePermissionRequest {
-                service_id: String::from("taskios")
-            })
-            .await;
-
-        match service_permission_response {
-            ServicePermissionResponse::Ok { has_permission } => if !has_permission {
-                return Err(Error::Unauthorized);
-            },
-            ServicePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ServicePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
-            ServicePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
-            ServicePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
+        let task = match TaskRepository::retrieve(&mut *database_connection, params.task_id).await {
+            Some(task) => task,
+            None => return Err(Error::TaskNotFound)
         };
 
-        let resource_permission_response = authios_client.query()
-            .user()
-            .logged(params.token.clone())
-            .permissions()
-            .resource()
-            .check(ResourcePermissionRequest {
-                service_id: String::from("taskios"),
-                resource_type: String::from("project"),
-                resource_id: params.task_id.to_string(),
-                permission_name: String::from("write")
-            })
-            .await;
-
-        match resource_permission_response {
-            ResourcePermissionResponse::Ok { has_permission } => if !has_permission {
-                return Err(Error::Unauthorized);
-            },
-            ResourcePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
-            ResourcePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
-            ResourcePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
-            ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
+        match check_user_project_permission(params.token.clone(), task.project_id, String::from("write"), authios_client.clone()).await {
+            Ok(false) => return Err(Error::Unauthorized),
+            Err(ProjectPermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
+            _ => ()
         };
 
-        let result = crate::repositories::TaskRepository::delete(&mut *database_connection, params.task_id).await;
+        let result = TaskRepository::delete(&mut *database_connection, params.task_id).await;
 
         match result {
             Ok(_) => Ok(()),
@@ -73,7 +49,7 @@ impl TaskDeleteFeature {
     }
 
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
-        use actix_web::web;
+        use actix_web:: web;
 
         cfg.service(
             web::resource(Self::path()).route(web::delete().to(Self::controller))

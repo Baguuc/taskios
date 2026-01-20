@@ -29,6 +29,28 @@ impl TaskRepository {
         result.map_err(|_| Error::ProjectNotFound)
     }
 
+    /// retrieve a task from a database by the id
+    ///
+    /// arguments:
+    /// * database_connection: the database connection in the form of an acquirable connection
+    /// * task_id: id of the task to retrieve
+    pub async fn retrieve<'a, A: sqlx::Acquire<'a, Database = sqlx::Postgres>>(
+        database_connection: A,
+        task_id: &i32,
+    ) -> Option<crate::models::Task> {
+        let mut database_connection = database_connection.acquire()
+            .await
+            .unwrap();
+
+        let sql = "SELECT id, title, description, done, project_id FROM tasks WHERE id = $1;";
+        let result = sqlx::query_as(sql)
+            .bind(&task_id)
+            .fetch_one(&mut *database_connection)
+            .await;
+
+        result.ok()
+    }
+
     /// list tasks belonging to a project with specified id
     ///
     /// arguments:

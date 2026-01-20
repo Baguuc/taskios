@@ -1,3 +1,4 @@
+// MUTABLE CONFIG
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Config {
     pub port: u16,
@@ -36,3 +37,6 @@ impl Config {
         return Ok(parsed);
     }
 }
+
+// IMMUTABLE CONFIG - accessible only by the application
+pub const AUTHIOS_SERVICE_NAME: &str = "taskios";
