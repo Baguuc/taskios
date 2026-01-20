@@ -4,7 +4,8 @@ impl ProjectDeleteFeature {
     pub async fn execute<'p>(
         params: crate::params::feature::ProjectDeleteParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
-        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
+        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
+        config: std::sync::Arc<crate::config::Config>
     ) -> Result<(), crate::errors::feature::ProjectDeleteError> {
         use crate::utils::panic::UtilPanics;
         use crate::errors::feature::ProjectDeleteError as Error;
@@ -64,10 +65,26 @@ impl ProjectDeleteFeature {
             ResourcePermissionResponse::PermissionNotFound => UtilPanics::authios_not_inited(),
         };
         
-        match crate::repositories::ProjectRepository::delete(&mut *database_connection, params.id).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(Error::ProjectNotFound)
-        }
+        let _ = match crate::repositories::ProjectRepository::delete(&mut *database_connection, params.id).await {
+            Ok(_) => (),
+            // only this possibility can be covered
+            Err(_) => return Err(Error::ProjectNotFound)
+        };
+
+        // this won't error as we reject invalid token during the permission check
+        let _ = crate::utils::auth::bulk_revoke_project_permissions(
+            params.token.clone(),
+            params.id.clone(),
+            vec![
+                String::from("read"),
+                String::from("write"),
+                String::from("manage")
+            ],
+            authios_client,
+            config.auth.root.password.clone()
+        ).await;
+
+        Ok(())
     }
 
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
@@ -84,7 +101,8 @@ impl ProjectDeleteFeature {
         path: actix_web::web::Path<Path>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
-        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
+        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>,
+        config: actix_web::web::Data<crate::config::Config>,
     ) -> actix_web::HttpResponse {
         use serde_json::json;
         use actix_web::HttpResponse;
@@ -96,7 +114,8 @@ impl ProjectDeleteFeature {
                 token: &token.0
             },
             database_connection.into_inner(),
-            authios_client.into_inner()
+            authios_client.into_inner(),
+            config.into_inner()
         ).await;
 
         match result {
