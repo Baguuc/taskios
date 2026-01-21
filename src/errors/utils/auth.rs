@@ -3,7 +3,7 @@
 pub enum BulkProjectPermissionGrantError {
     /// returned when the token user provided is invalid
     #[error("invalid_token")]
-    InvalidToken
+    InvalidToken,
 }
 
 /// returned when bulk project permission revoke fails
@@ -11,7 +11,7 @@ pub enum BulkProjectPermissionGrantError {
 pub enum BulkProjectPermissionRevokeError {
     /// returned when the token user provided is invalid
     #[error("invalid_token")]
-    InvalidToken
+    InvalidToken,
 }
 
 /// returned when checking if the user has the global service permission fails
@@ -19,7 +19,7 @@ pub enum BulkProjectPermissionRevokeError {
 pub enum ServicePermissionCheckError {
     /// returned when the token user provided is invalid
     #[error("invalid_token")]
-    InvalidToken
+    InvalidToken,
 }
 
 /// returned when checking if the user has a project permission fails
@@ -27,5 +27,5 @@ pub enum ServicePermissionCheckError {
 pub enum ProjectPermissionCheckError {
     /// returned when the token user provided is invalid
     #[error("invalid_token")]
-    InvalidToken
+    InvalidToken,
 }

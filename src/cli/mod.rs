@@ -10,14 +10,14 @@ pub mod commands;
 #[command(about = "A task organization software's API.", long_about = None)]
 pub enum MainCli {
     #[command(about = "Run the HTTP server", long_about = None)]
-    Run(CliFlags)
+    Run(CliFlags),
 }
 
 /// defines the structure of cli flags of the program.
 #[derive(clap::Args, Clone)]
 pub struct CliFlags {
     #[clap(long, short)]
-    config: Option<String>
+    config: Option<String>,
 }
 
 impl MainCli {
@@ -32,7 +32,9 @@ impl MainCli {
     /// runs the program with already scraped arguments and flags.
     pub async fn execute(self) {
         match self {
-            Self::Run(args) => { commands::run(args).await; }
+            Self::Run(args) => {
+                commands::run(args).await;
+            }
         };
     }
 }

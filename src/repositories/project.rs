@@ -10,9 +10,7 @@ impl ProjectRepository {
         database_connection: A,
         project: &crate::models::ProjectWithoutId,
     ) -> Result<crate::models::Project, crate::errors::repository::ProjectCreateError> {
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "INSERT INTO projects (name) VALUES ($1) RETURNING id, name;";
         let project = sqlx::query_as(sql)
@@ -34,9 +32,7 @@ impl ProjectRepository {
         database_connection: A,
         project_id: &i32,
     ) -> Option<crate::models::Project> {
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "SELECT id, name FROM projects WHERE id = $1;";
         let result = sqlx::query_as(sql)
@@ -56,14 +52,12 @@ impl ProjectRepository {
     pub async fn update<'a, A: sqlx::Acquire<'a, Database = sqlx::Postgres>>(
         database_connection: A,
         project_id: &i32,
-        new_data: &crate::models::PartialProject
+        new_data: &crate::models::PartialProject,
     ) -> Result<crate::models::Project, crate::errors::repository::ProjectUpdateError> {
         use crate::errors::repository::ProjectUpdateError as Error;
         use crate::models::ProjectWithoutId;
 
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "SELECT name FROM tasks WHERE id = $1;";
         let project: ProjectWithoutId = sqlx::query_as(sql)
@@ -93,9 +87,7 @@ impl ProjectRepository {
     ) -> Result<(), crate::errors::repository::ProjectDeleteError> {
         use crate::errors::repository::ProjectDeleteError as Error;
 
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "DELETE FROM projects WHERE id = $1;";
         let result = sqlx::query(sql)

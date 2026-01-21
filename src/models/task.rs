@@ -5,7 +5,7 @@ pub struct Task {
     pub title: String,
     pub description: String,
     pub done: bool,
-    pub project_id: i32
+    pub project_id: i32,
 }
 
 /// struct representing a task without id
@@ -14,7 +14,7 @@ pub struct TaskWithoutId {
     pub title: String,
     pub description: String,
     pub done: bool,
-    pub project_id: i32
+    pub project_id: i32,
 }
 
 /// struct representing a partial task

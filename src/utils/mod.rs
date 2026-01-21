@@ -1,5 +1,5 @@
-pub mod project;
-pub mod database;
-pub mod panic;
 pub mod auth;
+pub mod database;
 pub mod error;
+pub mod panic;
+pub mod project;

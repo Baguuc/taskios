@@ -4,31 +4,28 @@ impl TaskListFeature {
     pub async fn execute<'p>(
         params: crate::params::feature::TasksListParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
-        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
-    ) -> Result<Option<Vec<crate::models::Task>>, crate::errors::feature::ProjectListTasksError> {
-        use crate::utils::{
-            panic::UtilPanics,
-            project::project_exists,
-            auth::check_user_service_permission
-        };
+        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
+    ) -> Result<Option<Vec<crate::models::Task>>, crate::errors::feature::ProjectListTasksError>
+    {
         use crate::errors::{
-            feature::ProjectListTasksError as Error,
-            utils::auth::ServicePermissionCheckError
+            feature::ProjectListTasksError as Error, utils::auth::ServicePermissionCheckError,
+        };
+        use crate::utils::{
+            auth::check_user_service_permission, panic::UtilPanics, project::project_exists,
         };
         use authios_sdk::requests::LoggedUserCheckResourcePermissionRequest as ResourcePermissionRequest;
         use authios_sdk::responses::LoggedUserCheckResourcePermissionResponse as ResourcePermissionResponse;
 
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         match check_user_service_permission(params.token.clone(), authios_client.clone()).await {
             Ok(false) => return Err(Error::Unauthorized),
             Err(ServicePermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
-            _ => ()
+            _ => (),
         };
 
-        let resource_permission_response = authios_client.query()
+        let resource_permission_response = authios_client
+            .query()
             .user()
             .logged(params.token.clone())
             .permissions()
@@ -37,14 +34,16 @@ impl TaskListFeature {
                 service_id: String::from("taskios"),
                 resource_type: String::from("project"),
                 resource_id: params.project_id.to_string(),
-                permission_name: String::from("read")
+                permission_name: String::from("read"),
             })
             .await;
 
         match resource_permission_response {
-            ResourcePermissionResponse::Ok { has_permission } => if !has_permission {
-                return Err(Error::Unauthorized);
-            },
+            ResourcePermissionResponse::Ok { has_permission } => {
+                if !has_permission {
+                    return Err(Error::Unauthorized);
+                }
+            }
             ResourcePermissionResponse::InvalidToken => return Err(Error::InvalidToken),
             ResourcePermissionResponse::ServerNotAuthios => UtilPanics::server_not_authios(),
             ResourcePermissionResponse::ServerUnavailable => UtilPanics::authios_unavailable(),
@@ -55,39 +54,42 @@ impl TaskListFeature {
             return Err(Error::ProjectNotFound);
         }
 
-        let tasks = crate::repositories::TaskRepository::list(&mut *database_connection, params.project_id).await;
+        let tasks =
+            crate::repositories::TaskRepository::list(&mut *database_connection, params.project_id)
+                .await;
         Ok(Some(tasks))
     }
 
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
         use actix_web::web;
 
-        cfg.service(
-            web::resource(Self::path()).route(web::get().to(Self::controller))
-        );
+        cfg.service(web::resource(Self::path()).route(web::get().to(Self::controller)));
     }
 
-    fn path() -> &'static str { "/projects/{id}/tasks" }
+    fn path() -> &'static str {
+        "/projects/{id}/tasks"
+    }
 
     async fn controller(
         path: actix_web::web::Path<Path>,
         query: actix_web::web::Query<Query>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
-        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
+        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>,
     ) -> actix_web::HttpResponse {
-        use serde_json::json;
-        use actix_web::HttpResponse;
         use crate::errors::feature::ProjectListTasksError as Error;
+        use actix_web::HttpResponse;
+        use serde_json::json;
 
         let result = Self::execute(
             crate::params::feature::TasksListParams {
                 project_id: &path.id,
-                token: &token.0
+                token: &token.0,
             },
             database_connection.into_inner(),
-            authios_client.into_inner()
-        ).await;
+            authios_client.into_inner(),
+        )
+        .await;
 
         match result {
             Ok(data) if data.is_some() => HttpResponse::Ok().json(json!({
@@ -95,13 +97,13 @@ impl TaskListFeature {
                 "tasks": data.unwrap().iter().map(|row| {
                     DataRow {
                         id: if query.get_id.unwrap_or(true)
-                            { Some(row.id.clone()) } else { None },
+                            { Some(row.id) } else { None },
                         title: if query.get_title.unwrap_or(true)
                             { Some(row.title.clone()) } else { None },
                         description: if query.get_description.unwrap_or(true)
                             { Some(row.description.clone()) } else { None },
                         done: if query.get_done.unwrap_or(true)
-                            { Some(row.done.clone()) } else { None }
+                            { Some(row.done) } else { None }
                     }
                 }).collect::<Vec<DataRow>>()
             })),
@@ -110,13 +112,16 @@ impl TaskListFeature {
                 "page": null
             })),
             Err(error) => match error {
-                Error::Unauthorized => HttpResponse::Forbidden()
-                    .json(json!({ "code": "forbidden" })),
-                Error::InvalidToken => HttpResponse::Unauthorized()
-                    .json(json!({ "code": "invalid_token" })),
-                Error::ProjectNotFound => HttpResponse::NotFound()
-                    .json(json!({ "code": "project_not_found" })),
-            }
+                Error::Unauthorized => {
+                    HttpResponse::Forbidden().json(json!({ "code": "forbidden" }))
+                }
+                Error::InvalidToken => {
+                    HttpResponse::Unauthorized().json(json!({ "code": "invalid_token" }))
+                }
+                Error::ProjectNotFound => {
+                    HttpResponse::NotFound().json(json!({ "code": "project_not_found" }))
+                }
+            },
         }
     }
 }
@@ -127,12 +132,12 @@ struct DataRow {
     id: Option<i32>,
     title: Option<String>,
     description: Option<String>,
-    done: Option<bool>
+    done: Option<bool>,
 }
 
 #[derive(serde::Deserialize)]
 struct Path {
-    id: i32
+    id: i32,
 }
 
 #[derive(serde::Deserialize)]
@@ -140,5 +145,5 @@ struct Query {
     get_id: Option<bool>,
     get_title: Option<bool>,
     get_description: Option<bool>,
-    get_done: Option<bool>
+    get_done: Option<bool>,
 }

@@ -3,7 +3,7 @@ pub enum ProjectCreateError {
     #[error("unauthorized")]
     Unauthorized,
     #[error("invalid_token")]
-    InvalidToken
+    InvalidToken,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -11,7 +11,7 @@ pub enum ProjectListError {
     #[error("unauthorized")]
     Unauthorized,
     #[error("invalid_token")]
-    InvalidToken
+    InvalidToken,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -21,7 +21,7 @@ pub enum ProjectUpdateError {
     #[error("invalid_token")]
     InvalidToken,
     #[error("project_not_found")]
-    ProjectNotFound
+    ProjectNotFound,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -31,7 +31,7 @@ pub enum ProjectDeleteError {
     #[error("invalid_token")]
     InvalidToken,
     #[error("project_not_found")]
-    ProjectNotFound
+    ProjectNotFound,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -41,7 +41,7 @@ pub enum ProjectListTasksError {
     #[error("invalid_token")]
     InvalidToken,
     #[error("project_not_found")]
-    ProjectNotFound
+    ProjectNotFound,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -51,7 +51,7 @@ pub enum ProjectCreateTaskError {
     #[error("invalid_token")]
     InvalidToken,
     #[error("project_not_found")]
-    ProjectNotFound
+    ProjectNotFound,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -61,7 +61,7 @@ pub enum ProjectDeleteTaskError {
     #[error("invalid_token")]
     InvalidToken,
     #[error("task_not_found")]
-    TaskNotFound
+    TaskNotFound,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -71,5 +71,5 @@ pub enum ProjectUpdateTaskError {
     #[error("invalid_token")]
     InvalidToken,
     #[error("task_not_found")]
-    TaskNotFound
+    TaskNotFound,
 }

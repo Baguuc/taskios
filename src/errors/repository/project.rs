@@ -7,7 +7,7 @@ pub enum ProjectCreateError {}
 pub enum ProjectUpdateError {
     /// the project does not exist
     #[error("project_not_found")]
-    ProjectNotFound
+    ProjectNotFound,
 }
 
 /// error returned when deleting user's project fails
@@ -15,5 +15,5 @@ pub enum ProjectUpdateError {
 pub enum ProjectDeleteError {
     /// the project does not exist
     #[error("project_not_found")]
-    ProjectNotFound
+    ProjectNotFound,
 }

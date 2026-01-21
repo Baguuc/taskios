@@ -13,16 +13,14 @@ impl TaskRepository {
     ) -> Result<crate::models::Task, crate::errors::repository::TaskCreateError> {
         use crate::errors::repository::TaskCreateError as Error;
 
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "INSERT INTO tasks (title, description, done, project_id) VALUES ($1, $2, $3, $4) RETURNING id, title, description, done;";
         let result = sqlx::query_as(sql)
             .bind(&task.title)
             .bind(&task.description)
-            .bind(&task.done)
-            .bind(&task.project_id)
+            .bind(task.done)
+            .bind(task.project_id)
             .fetch_one(&mut *database_connection)
             .await;
 
@@ -38,13 +36,11 @@ impl TaskRepository {
         database_connection: A,
         task_id: &i32,
     ) -> Option<crate::models::Task> {
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "SELECT id, title, description, done, project_id FROM tasks WHERE id = $1;";
         let result = sqlx::query_as(sql)
-            .bind(&task_id)
+            .bind(task_id)
             .fetch_one(&mut *database_connection)
             .await;
 
@@ -60,9 +56,7 @@ impl TaskRepository {
         database_connection: A,
         project_id: &i32,
     ) -> Vec<crate::models::Task> {
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "SELECT id, title, description, done FROM tasks WHERE project_id = $1;";
         let result = sqlx::query_as(sql)
@@ -82,14 +76,12 @@ impl TaskRepository {
     pub async fn update<'a, A: sqlx::Acquire<'a, Database = sqlx::Postgres>>(
         database_connection: A,
         task_id: &i32,
-        new_data: &crate::models::PartialTask
+        new_data: &crate::models::PartialTask,
     ) -> Result<crate::models::Task, crate::errors::repository::TaskUpdateError> {
         use crate::errors::repository::TaskUpdateError as Error;
         use crate::models::TaskWithoutId;
 
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "SELECT title, description, done FROM tasks WHERE id = $1;";
         let task: TaskWithoutId = sqlx::query_as(sql)
@@ -121,9 +113,7 @@ impl TaskRepository {
     ) -> Result<(), crate::errors::repository::TaskDeleteError> {
         use crate::errors::repository::TaskDeleteError as Error;
 
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let sql = "DELETE FROM tasks WHERE task_id = $1;";
         let result = sqlx::query(sql)

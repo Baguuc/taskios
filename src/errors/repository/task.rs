@@ -11,7 +11,7 @@ pub enum TaskCreateError {
 pub enum TaskUpdateError {
     /// the task does not exist
     #[error("task_not_found")]
-    TaskNotFound
+    TaskNotFound,
 }
 
 /// error returned when creating a task fails

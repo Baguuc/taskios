@@ -4,89 +4,92 @@ impl TaskDeleteFeature {
     pub async fn execute<'p>(
         params: crate::params::feature::TaskDeleteParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
-        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>
+        authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
     ) -> Result<(), crate::errors::feature::ProjectDeleteTaskError> {
-        use crate::repositories::TaskRepository;
-        use crate::utils::auth::{
-            check_user_service_permission,
-            check_user_project_permission
-        };
         use crate::errors::{
             feature::ProjectDeleteTaskError as Error,
-            utils::auth::{
-                ServicePermissionCheckError,
-                ProjectPermissionCheckError
-            }
+            utils::auth::{ProjectPermissionCheckError, ServicePermissionCheckError},
         };
+        use crate::repositories::TaskRepository;
+        use crate::utils::auth::{check_user_project_permission, check_user_service_permission};
 
         match check_user_service_permission(params.token.clone(), authios_client.clone()).await {
             Ok(false) => return Err(Error::Unauthorized),
             Err(ServicePermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
-            _ => ()
+            _ => (),
         };
 
-        let mut database_connection = database_connection.acquire()
-            .await
-            .unwrap();
+        let mut database_connection = database_connection.acquire().await.unwrap();
 
         let task = match TaskRepository::retrieve(&mut *database_connection, params.task_id).await {
             Some(task) => task,
-            None => return Err(Error::TaskNotFound)
+            None => return Err(Error::TaskNotFound),
         };
 
-        match check_user_project_permission(params.token.clone(), task.project_id, String::from("write"), authios_client.clone()).await {
+        match check_user_project_permission(
+            params.token.clone(),
+            task.project_id,
+            String::from("write"),
+            authios_client.clone(),
+        )
+        .await
+        {
             Ok(false) => return Err(Error::Unauthorized),
             Err(ProjectPermissionCheckError::InvalidToken) => return Err(Error::InvalidToken),
-            _ => ()
+            _ => (),
         };
 
         let result = TaskRepository::delete(&mut *database_connection, params.task_id).await;
 
         match result {
             Ok(_) => Ok(()),
-            Err(_) => Err(Error::TaskNotFound)
+            Err(_) => Err(Error::TaskNotFound),
         }
     }
 
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
-        use actix_web:: web;
+        use actix_web::web;
 
-        cfg.service(
-            web::resource(Self::path()).route(web::delete().to(Self::controller))
-        );
+        cfg.service(web::resource(Self::path()).route(web::delete().to(Self::controller)));
     }
 
-    fn path() -> &'static str { "/tasks/{task_id}" }
+    fn path() -> &'static str {
+        "/tasks/{task_id}"
+    }
 
     async fn controller(
         path: actix_web::web::Path<Path>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
-        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>
+        authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>,
     ) -> actix_web::HttpResponse {
-        use serde_json::json;
-        use actix_web::HttpResponse;
         use crate::errors::feature::ProjectDeleteTaskError as Error;
+        use actix_web::HttpResponse;
+        use serde_json::json;
 
         let result = Self::execute(
             crate::params::feature::TaskDeleteParams {
                 task_id: &path.task_id,
-                token: &token.0
+                token: &token.0,
             },
             database_connection.into_inner(),
-            authios_client.into_inner()
-        ).await;
+            authios_client.into_inner(),
+        )
+        .await;
 
         match result {
             Ok(_) => HttpResponse::Ok().into(),
             Err(error) => match error {
-                Error::Unauthorized => HttpResponse::Forbidden()
-                    .json(json!({ "code": "forbidden" })),
-                Error::InvalidToken => HttpResponse::Unauthorized()
-                    .json(json!({ "code": "invalid_token" })),
-                Error::TaskNotFound => HttpResponse::NotFound()
-                    .json(json!({ "code": "task_not_found" }))
-            }
+                Error::Unauthorized => {
+                    HttpResponse::Forbidden().json(json!({ "code": "forbidden" }))
+                }
+                Error::InvalidToken => {
+                    HttpResponse::Unauthorized().json(json!({ "code": "invalid_token" }))
+                }
+                Error::TaskNotFound => {
+                    HttpResponse::NotFound().json(json!({ "code": "task_not_found" }))
+                }
+            },
         }
     }
 }

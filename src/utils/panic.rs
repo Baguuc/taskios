@@ -10,6 +10,8 @@ impl UtilPanics {
     }
 
     pub fn authios_not_inited() {
-        panic!("AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software");
+        panic!(
+            "AUTH SERVER ERROR: auth server wasn't inited - it's lacking crucial permissions to run this software"
+        );
     }
 }
