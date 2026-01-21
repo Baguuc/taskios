@@ -50,7 +50,7 @@ pub async fn bulk_grant_project_permissions(
             .permissions()
             .resource()
             .grant(PermissionGrantRequest {
-                service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string(),
+                service_id: crate::config::SERVICE_NAME.to_string(),
                 resource_type: String::from("project"),
                 resource_id: project_id.to_string(),
                 permission_name,
@@ -113,7 +113,7 @@ pub async fn bulk_revoke_project_permissions(
             .permissions()
             .resource()
             .revoke(PermissionRevokeRequest {
-                service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string(),
+                service_id: crate::config::SERVICE_NAME.to_string(),
                 resource_type: String::from("project"),
                 resource_id: project_id.to_string(),
                 permission_name,
@@ -143,7 +143,7 @@ pub async fn check_user_project_permission(
         .permissions()
         .resource()
         .check(Request {
-            service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string(),
+            service_id: crate::config::SERVICE_NAME.to_string(),
             resource_type: String::from("project"),
             resource_id: project_id.to_string(),
             permission_name,
@@ -185,7 +185,7 @@ pub async fn check_user_service_permission(
         .permissions()
         .service()
         .check(Request {
-            service_id: crate::config::AUTHIOS_SERVICE_NAME.to_string(),
+            service_id: crate::config::SERVICE_NAME.to_string(),
         })
         .await;
 

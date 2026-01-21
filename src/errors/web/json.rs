@@ -1,6 +1,5 @@
-/// generic error occuring during json data deserialization, serves as a json replacement of the default
+/// a generic error occuring during json data deserialization, serves as a json replacement of the default
 /// actix_web one.
-///
 #[derive(Debug)]
 pub struct JsonDeserializeError(pub actix_web::error::JsonPayloadError);
 

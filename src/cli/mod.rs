@@ -1,8 +1,6 @@
 pub mod commands;
 
-/// # MainCli
-///
-/// defines the structure of the cli arguments and flags of the program.
+/// Defines the structure of the cli arguments and flags of the program.
 ///
 #[derive(clap::Parser)]
 #[command(name = "taskios")]
@@ -13,7 +11,7 @@ pub enum MainCli {
     Run(CliFlags),
 }
 
-/// defines the structure of cli flags of the program.
+/// Defines the structure of cli flags of the program.
 #[derive(clap::Args, Clone)]
 pub struct CliFlags {
     #[clap(long, short)]
@@ -21,7 +19,7 @@ pub struct CliFlags {
 }
 
 impl MainCli {
-    /// parses the CLI arguments and flags and runs the program.
+    /// Parses the CLI arguments and flags and runs the program.
     pub async fn run() {
         use clap::Parser;
 
@@ -29,7 +27,7 @@ impl MainCli {
         cli.execute().await;
     }
 
-    /// runs the program with already scraped arguments and flags.
+    /// Runs the program with already scraped arguments and flags.
     pub async fn execute(self) {
         match self {
             Self::Run(args) => {

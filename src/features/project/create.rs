@@ -1,7 +1,17 @@
+/// Feature allowing to create a project.
+/// This struct contains functions to execute and register the feature in the actix_web's app.
 pub struct ProjectCreateFeature;
 
 impl ProjectCreateFeature {
-    pub async fn execute<'p>(
+    /// A helper function to register the feature in the actix_web's app
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(web::resource(Self::url()).route(web::post().to(Self::controller)));
+    }
+
+    /// the logic of the feature - database interaction, authorization
+    async fn execute<'p>(
         params: crate::params::feature::ProjectCreateParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
@@ -47,16 +57,13 @@ impl ProjectCreateFeature {
         Ok(project)
     }
 
-    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
-        use actix_web::web;
-
-        cfg.service(web::resource(Self::path()).route(web::post().to(Self::controller)));
-    }
-
-    fn path() -> &'static str {
+    /// Helper function to store the feature's url in one place.
+    const fn url() -> &'static str {
         "/projects"
     }
 
+    /// The controller layer bridging the logic and the web framework.
+    /// It receives the request parameters and passes them to the business logic.
     async fn controller(
         body: actix_web::web::Json<crate::models::ProjectWithoutId>,
         token: crate::extractors::TokenExtractor,

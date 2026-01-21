@@ -1,5 +1,4 @@
-/// Represents one of errors that can occur while running the API's HTTP server with authios::web::run_api function.
-///
+/// represents one of errors that can occur while running the API's HTTP server with authios::web::run_api function.
 #[derive(thiserror::Error, Debug)]
 pub enum ServerRunError {
     /// This means that the server cannot be created for some reason.

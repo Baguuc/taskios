@@ -1,4 +1,7 @@
 /// Run the API's HTTP server.
+///
+/// arguments:
+/// * config: configuration of the app in the [crate::config::Config] format.
 pub async fn run_api(
     config: crate::config::Config,
 ) -> Result<(), crate::errors::web::ServerRunError> {

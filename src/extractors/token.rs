@@ -1,4 +1,4 @@
-/// extracts the JWT session token from HttpRequest with the extractor pattern.
+/// Extracts the JWT session token from HttpRequest with the extractor pattern.
 /// Example:
 /// ```rust
 /// #[get("/permissions/resource")]
@@ -12,7 +12,6 @@
 ///     // ...
 /// }
 /// ```
-///
 pub struct TokenExtractor(pub String);
 
 impl actix_web::FromRequest for TokenExtractor {

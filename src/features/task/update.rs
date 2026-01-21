@@ -1,13 +1,21 @@
 pub struct TaskUpdateFeature;
 
 impl TaskUpdateFeature {
-    pub async fn execute<'p>(
+    /// A helper function to register the feature in the service configuration.
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(web::resource(Self::path()).route(web::patch().to(Self::controller)));
+    }
+
+    /// The logic of the feature - database interaction, authorization
+    async fn execute<'p>(
         params: crate::params::feature::TasksUpdateParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
-    ) -> Result<crate::models::Task, crate::errors::feature::ProjectUpdateTaskError> {
+    ) -> Result<crate::models::Task, crate::errors::feature::TaskUpdateError> {
         use crate::errors::{
-            feature::ProjectUpdateTaskError as Error,
+            feature::TaskUpdateError as Error,
             utils::auth::{ProjectPermissionCheckError, ServicePermissionCheckError},
         };
         use crate::repositories::TaskRepository;
@@ -46,16 +54,13 @@ impl TaskUpdateFeature {
         result.map_err(|_| Error::TaskNotFound)
     }
 
-    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
-        use actix_web::web;
-
-        cfg.service(web::resource(Self::path()).route(web::patch().to(Self::controller)));
-    }
-
-    fn path() -> &'static str {
+    /// A helper function to store the feature's url in one place.
+    const fn path() -> &'static str {
         "/projects/{id}"
     }
 
+    /// The controller for the feature.
+    /// Recieves HTTP request's extractors as parameters and bridges the data to the business logic layer.
     async fn controller(
         path: actix_web::web::Path<Path>,
         body: actix_web::web::Json<crate::models::PartialTask>,
@@ -63,7 +68,7 @@ impl TaskUpdateFeature {
         database_connection: actix_web::web::Data<sqlx::PgPool>,
         authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>,
     ) -> actix_web::HttpResponse {
-        use crate::errors::feature::ProjectUpdateTaskError as Error;
+        use crate::errors::feature::TaskUpdateError as Error;
         use actix_web::HttpResponse;
         use serde_json::json;
 

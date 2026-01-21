@@ -1,21 +1,14 @@
-/// # ConfigReadError
-///
 /// Represents one of errors that can occur during reading a config using
-/// [crate::config::Config::read] method.
+/// [crate::config::Config::read] function.
 ///
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigReadError {
-    /// ## ConfigReadError::Serde
-    ///
-    /// This means that the provided config cannot be deserialized, meaning that it's formatted
+    /// this means that the provided config cannot be deserialized, meaning that it's formatted
     /// wrong or possibly is lacking mandatory fields.
-    ///
-    #[error("Wrong config format (not JSON)")]
+    #[error("Wrong config format: {0}")]
     Serde(#[from] serde_json::error::Error),
-    /// ## ConfigReadError::FS
-    ///
-    /// This means that config file at provided file either cannot be read or the program is not
-    /// authorized to read it (for example it's in a folder with root owner).
-    #[error("Cannot read the config")]
+    /// this means that config file at provided file either cannot be read or the program is not
+    /// authorized to read it (for example it's in a folder with root-only permissions).
+    #[error("Cannot read the config.")]
     FS(#[from] std::io::Error),
 }

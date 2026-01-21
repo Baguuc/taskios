@@ -1,7 +1,17 @@
+/// Feature allowing to delete a project.
+/// This struct contains functions to execute and register the feature in the actix_web's app.
 pub struct ProjectDeleteFeature;
 
 impl ProjectDeleteFeature {
-    pub async fn execute<'p>(
+    /// A helper function to register the feature in the actix_web's app.
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(web::resource(Self::url()).route(web::delete().to(Self::controller)));
+    }
+
+    /// The logic of the feature - database interaction, authorization
+    async fn execute<'p>(
         params: crate::params::feature::ProjectDeleteParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
@@ -59,16 +69,13 @@ impl ProjectDeleteFeature {
         Ok(())
     }
 
-    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
-        use actix_web::web;
-
-        cfg.service(web::resource(Self::path()).route(web::delete().to(Self::controller)));
-    }
-
-    fn path() -> &'static str {
+    /// A helper function to store the feature's url in one place.
+    const fn url() -> &'static str {
         "/projects/{id}"
     }
 
+    /// The controller layer bridging the logic and the web framework.
+    /// It receives the request parameters and passes them to the business logic.
     async fn controller(
         path: actix_web::web::Path<Path>,
         token: crate::extractors::TokenExtractor,

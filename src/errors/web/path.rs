@@ -1,6 +1,5 @@
-/// generic error occuring during path data deserialization, serves as a json replacement of the default
+/// a generic error occuring during path data deserialization, serves as a json replacement of the default
 /// actix_web one.
-///
 #[derive(Debug)]
 pub struct PathDeserializeError(pub actix_web::error::PathError);
 

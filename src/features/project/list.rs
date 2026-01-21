@@ -1,7 +1,16 @@
+/// Lists the projects that the user has access to.
 pub struct ProjectListFeature;
 
 impl ProjectListFeature {
-    pub async fn execute<'p>(
+    /// A helper function to register the feature in the service configuration
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(web::resource(Self::path()).route(web::get().to(Self::controller)));
+    }
+
+    /// The logic of the feature - database interaction, authorization
+    async fn execute<'p>(
         params: crate::params::feature::ProjectListParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
@@ -94,16 +103,13 @@ impl ProjectListFeature {
         Ok(Some(user_projects))
     }
 
-    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
-        use actix_web::web;
-
-        cfg.service(web::resource(Self::path()).route(web::get().to(Self::controller)));
-    }
-
-    fn path() -> &'static str {
+    /// A helper function to store the feature's url in one place.
+    const fn path() -> &'static str {
         "/projects/my"
     }
 
+    /// The controller for the feature.
+    /// Recieves HTTP request's extractors as parameters and bridges the data to the business logic layer.
     async fn controller(
         query: actix_web::web::Query<Query>,
         token: crate::extractors::TokenExtractor,

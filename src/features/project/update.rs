@@ -1,7 +1,9 @@
+/// Feature allowing to update a project.
 pub struct ProjectUpdateFeature;
 
 impl ProjectUpdateFeature {
-    pub async fn execute<'p>(
+    /// The business logic of the feature.
+    async fn execute<'p>(
         params: crate::params::feature::ProjectUpdateParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
@@ -45,16 +47,20 @@ impl ProjectUpdateFeature {
         }
     }
 
+    /// A helper function to register the feature in the actix web server.
     pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
         use actix_web::web;
 
         cfg.service(web::resource(Self::path()).route(web::patch().to(Self::controller)));
     }
 
-    fn path() -> &'static str {
+    /// A helper function to store the feature's url in one place.
+    const fn path() -> &'static str {
         "/projects/{id}"
     }
 
+    /// The controller handling the request.
+    /// Bridges the HTTP request's data into the business logic layer.
     async fn controller(
         path: actix_web::web::Path<Path>,
         body: actix_web::web::Json<crate::models::PartialProject>,

@@ -1,13 +1,21 @@
 pub struct TaskDeleteFeature;
 
 impl TaskDeleteFeature {
-    pub async fn execute<'p>(
+    /// A helper function to register the feature in the service configuration.
+    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
+        use actix_web::web;
+
+        cfg.service(web::resource(Self::path()).route(web::delete().to(Self::controller)));
+    }
+
+    /// The logic of the feature - database interaction, authorization.
+    async fn execute<'p>(
         params: crate::params::feature::TaskDeleteParams<'p>,
         database_connection: std::sync::Arc<sqlx::PgPool>,
         authios_client: std::sync::Arc<authios_sdk::AuthiosClient>,
-    ) -> Result<(), crate::errors::feature::ProjectDeleteTaskError> {
+    ) -> Result<(), crate::errors::feature::TaskDeleteError> {
         use crate::errors::{
-            feature::ProjectDeleteTaskError as Error,
+            feature::TaskDeleteError as Error,
             utils::auth::{ProjectPermissionCheckError, ServicePermissionCheckError},
         };
         use crate::repositories::TaskRepository;
@@ -47,23 +55,20 @@ impl TaskDeleteFeature {
         }
     }
 
-    pub fn register(cfg: &mut actix_web::web::ServiceConfig) {
-        use actix_web::web;
-
-        cfg.service(web::resource(Self::path()).route(web::delete().to(Self::controller)));
-    }
-
-    fn path() -> &'static str {
+    /// A helper function to store the feature's url in one place.
+    const fn path() -> &'static str {
         "/tasks/{task_id}"
     }
 
+    /// The controller for the feature.
+    /// Recieves HTTP request's extractors as parameters and bridges the data to the business logic layer.
     async fn controller(
         path: actix_web::web::Path<Path>,
         token: crate::extractors::TokenExtractor,
         database_connection: actix_web::web::Data<sqlx::PgPool>,
         authios_client: actix_web::web::Data<authios_sdk::AuthiosClient>,
     ) -> actix_web::HttpResponse {
-        use crate::errors::feature::ProjectDeleteTaskError as Error;
+        use crate::errors::feature::TaskDeleteError as Error;
         use actix_web::HttpResponse;
         use serde_json::json;
 

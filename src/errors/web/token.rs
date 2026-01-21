@@ -1,5 +1,4 @@
-/// Represents a error that happens during extracting token from HTTP request's headers
-///
+/// represents a error that happens during extracting token from HTTP request's headers.
 #[derive(thiserror::Error, Debug)]
 pub enum TokenExtractionError {
     #[error("authorization_not_found")]

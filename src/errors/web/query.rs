@@ -1,6 +1,5 @@
-/// generic error occuring during query data deserialization, serves as a json replacement of the default
+/// a generic error occuring during query data deserialization, serves as a json replacement of the default
 /// actix_web one.
-///
 #[derive(Debug)]
 pub struct QueryDeserializeError(pub actix_web::error::QueryPayloadError);
 
