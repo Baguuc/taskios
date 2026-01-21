@@ -1,5 +1,4 @@
 /// Definition of the 'run' cli command, that is running the API's HTTP server.
-///
 pub async fn command(args: crate::cli::CliFlags) {
     use crate::config::Config;
     use crate::utils::error::error_if_necessary;
